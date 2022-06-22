@@ -350,10 +350,6 @@ export function validateDeleteMetadataOnly(
         refValString(contentRef, contentType),
       ]),
     );
-    validate(
-      v,
-      matchVatstoreGet(`vc.${idx}.sfoo`, refValString(contentRef, contentType)),
-    );
     if (!nonVirtual) {
       validateUpdate(v, `vom.rc.${contentRef}`, `${rc}`, `${rc - 1}`);
     }
@@ -375,11 +371,12 @@ export function validateDeleteMetadataOnly(
   }
   let priorKey = '';
   if (entries >= 0) {
+    validate(v, matchVatstoreSet(`vc.${idx}.|entryCount`, `0`));
     validate(
       v,
       matchVatstoreGetAfter('', `vc.${idx}.|`, NONE, [
         `vc.${idx}.|entryCount`,
-        `${entries}`,
+        `0`,
       ]),
     );
     validate(v, matchVatstoreDelete(`vc.${idx}.|entryCount`));

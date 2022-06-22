@@ -126,10 +126,10 @@ const testUpgrade = async (t, defaultManagerType) => {
     const s = kvStore.get(`${vatID}.c.${kref}`);
     return parseReachableAndVatSlot(s).vatSlot;
   };
-  const krefReachable = kref => {
-    const s = kvStore.get(`${vatID}.c.${kref}`);
-    return !!(s && parseReachableAndVatSlot(s).isReachable);
-  };
+  // const krefReachable = kref => {
+  //   const s = kvStore.get(`${vatID}.c.${kref}`);
+  //   return !!(s && parseReachableAndVatSlot(s).isReachable);
+  // };
   // We look in the vat's vatstore to see if the virtual/durable
   // object exists or not (as a state record).
   const vomHas = vref => {
@@ -233,12 +233,12 @@ const testUpgrade = async (t, defaultManagerType) => {
 
   for (let i = 1; i < NUM_SENSORS + 1; i += 1) {
     const vref = durVref(i);
-    const impKref = impKrefs[i];
+    // const impKref = impKrefs[i];
     const expD = survivingDurables.includes(i);
-    const expI = survivingImported.includes(i);
-    const reachable = krefReachable(impKref);
+    // const expI = survivingImported.includes(i);
+    // const reachable = krefReachable(impKref);
     t.is(vomHas(vref), expD, `dur[${i}] not ${expD}`);
-    t.is(reachable, expI, `imp[${i}] not ${expI}`);
+    // t.is(reachable, expI, `imp[${i}] not ${expI}`);
     // const abb = (b) => b.toString().slice(0,1).toUpperCase();
     // const vomS = `vom: ${abb(expD)} ${abb(vomHas(vref))}`;
     // const reachS = `${abb(expI)} ${abb(reachable)}`;
