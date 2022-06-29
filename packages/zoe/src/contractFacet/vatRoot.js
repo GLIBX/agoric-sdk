@@ -8,6 +8,7 @@
 // `yarn build-zcfBundle`.
 
 import { Far } from '@endo/marshal';
+import { E } from '@endo/far';
 
 import '../../exported.js';
 import '../internal-types.js';
@@ -16,43 +17,78 @@ import { makeZCFZygote } from './zcfZygote.js';
 
 /**
  * @param {VatPowers & { testJigSetter: TestJigSetter }} powers
- * @returns {{ executeContract: ExecuteContract}}
+ * @param {{contractBundleCap: BundleCap, zoeService: ZoeService, invitationIssuer: Issuer}} vatParameters
+ * @param {import('@agoric/vat-data').Baggage} baggage
  */
-export function buildRootObject(powers) {
+// * @returns {{ executeContract: ExecuteContract}}
+export function buildRootObject(powers, vatParameters, baggage) {
   // Currently, there is only one function, `executeContract` called
   // by the Zoe Service. However, when there is kernel support for
   // zygote vats (essentially freezing and then creating copies of
   // vats), `makeZCFZygote`, `zcfZygote.evaluateContract` and
   // `zcfZygote.startContract` should exposed separately.
   const { testJigSetter } = powers;
+  const { contractBundleCap } = vatParameters;
+  let { zoeService, invitationIssuer } = vatParameters;
+  const didStart = baggage.has('DidStart');
+  if (didStart) {
+    assert(!zoeService);
+    assert(!invitationIssuer);
+    zoeService = baggage.get('zoeService');
+    invitationIssuer = baggage.get('invitationIssuer');
+  } else {
+    baggage.init('DidStart', true);
+    baggage.init('zoeService', zoeService);
+    baggage.init('invitationIssuer', invitationIssuer);
+  }
 
-  /** @type {ExecuteContract} */
-  const executeContract = (
-    bundleOrBundleCap,
+  // make zcfZygote with contract-general state and kinds initialized
+  console.log(`VatRoot  ${Array.from(baggage.keys())}`);
+  const zcfZygote = makeZCFZygote(
+    powers,
     zoeService,
     invitationIssuer,
-    zoeInstanceAdmin,
-    instanceRecordFromZoe,
-    issuerStorageFromZoe,
-    privateArgs = undefined,
-  ) => {
-    /** @type {ZCFZygote} */
-    const zcfZygote = makeZCFZygote(
-      powers,
-      zoeService,
-      invitationIssuer,
-      testJigSetter,
-    );
-    zcfZygote.evaluateContract(bundleOrBundleCap);
-    return zcfZygote.startContract(
-      zoeInstanceAdmin,
-      instanceRecordFromZoe,
-      issuerStorageFromZoe,
-      privateArgs,
-    );
-  };
+    testJigSetter,
+    contractBundleCap,
+    baggage,
+  );
 
-  return Far('executeContract', { executeContract });
+  // snapshot zygote here //////////////////
+
+  return Far('contractRunner', {
+    // initialize instance-specific state of the contract (1st time)
+    startContract: (
+      zoeInstanceAdmin, // in 1st message post-clone
+      instanceRecordFromZoe, // in 1st msg post-clone (could split out installation)
+      // terms might change on upgrade?
+      issuerStorageFromZoe, // instance specific; stored in baggage
+      privateArgs = undefined, // instance specific; stored in baggage;
+      // upgrade might supplement this
+    ) => {
+      assert(!didStart);
+      // bikeshed: the outer and inner messages shouldn't both be startContract
+      /** @type {ZCFZygote} */
+      return E(zcfZygote).startContract(
+        zoeInstanceAdmin,
+        instanceRecordFromZoe,
+        issuerStorageFromZoe,
+        privateArgs,
+      );
+    },
+    // re-initialize instance-specific state of the contract (not 1st time)
+    restartContract: (
+      zoeInstanceAdmin, // in 1st message post-clone
+      instanceRecordFromZoe, // in 1st msg post-clone (could split out installation)
+      // terms might change on upgrade?
+      issuerStorageFromZoe, // instance specific; stored in baggage
+      privateArgs = undefined, // instance specific; stored in baggage;
+      // upgrade might supplement this
+    ) => {
+      assert(!didStart);
+      /** @type {ZCFZygote} */
+      return E(zcfZygote).restartContract(privateArgs);
+    },
+  });
 }
 
 harden(buildRootObject);

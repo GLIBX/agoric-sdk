@@ -35,7 +35,7 @@ import './internal-types.js';
  * @param {ShutdownWithFailure} shutdownZoeVat
  * @param {Issuer} feeIssuer
  * @param {Brand} feeBrand
- * @param {MapStore<string, unknown>} [zoeBaggage]
+ * @param {import('@agoric/vat-data').Baggage} [zoeBaggage]
  * @returns {ZoeStorageManager}
  */
 export const makeZoeStorageManager = (
@@ -112,6 +112,7 @@ export const makeZoeStorageManager = (
     customTerms,
     uncleanIssuerKeywordRecord,
     instance,
+    contractBundleCap,
   ) => {
     // Clean the issuerKeywordRecord we receive in `startInstance`
     // from the user, and save the issuers in Zoe if they are not
@@ -241,7 +242,7 @@ export const makeZoeStorageManager = (
       proposalSchemas,
     );
 
-    const { root, adminNode } = await createZCFVat();
+    const { root, adminNode } = await createZCFVat(contractBundleCap);
 
     return harden({
       getTerms: instanceRecordManager.getTerms,

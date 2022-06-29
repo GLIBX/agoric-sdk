@@ -8,7 +8,7 @@ import { Far } from '@endo/marshal';
 /**
  * @template {string} H
  * // ??? Purposeful use of `any`. Should we use `unknown` instead?
- * @param {MapStore<string, any>} baggage
+ * @param {import('@agoric/vat-data').Baggage} baggage
  * @param {H} handleType
  * @returns {() => Handle<H>}
  */

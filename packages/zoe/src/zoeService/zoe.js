@@ -25,7 +25,7 @@ import { makeZoeStorageManager } from './zoeStorageManager.js';
 import { makeStartInstance } from './startInstance.js';
 import { makeOfferMethod } from './offer/offer.js';
 import { makeInvitationQueryFns } from './invitationQueries.js';
-import { setupCreateZCFVat } from './createZCFVat.js';
+import { getZcfBundleCap, setupCreateZCFVat } from './createZCFVat.js';
 import { createFeeMint } from './feeMint.js';
 
 /**
@@ -38,7 +38,7 @@ import { createFeeMint } from './feeMint.js';
  * available to a vat.
  * @param {FeeIssuerConfig} feeIssuerConfig
  * @param {ZCFSpec} [zcfSpec] - Pointer to the contract facet bundle.
- * @param {MapStore<string, unknown>} [zoeBaggage]
+ * @param {import('@agoric/vat-data').Baggage} [zoeBaggage]
  * @returns {{
  *   zoeService: ZoeService,
  *   feeMintAccess: FeeMintAccess,
@@ -68,10 +68,19 @@ const makeZoeKit = (
   const getBundleCapFromID = bundleID =>
     E(vatAdminSvc).waitForBundleCap(bundleID);
 
+  const zcfBundleCap = getZcfBundleCap(zcfSpec, vatAdminSvc);
   // This method contains the power to create a new ZCF Vat, and must
   // be closely held. vatAdminSvc is even more powerful - any vat can
   // be created. We severely restrict access to vatAdminSvc for this reason.
-  const createZCFVat = setupCreateZCFVat(vatAdminSvc, zcfSpec);
+  const createZCFVat = setupCreateZCFVat(
+    vatAdminSvc,
+    zcfBundleCap,
+    // eslint-disable-next-line no-use-before-define
+    () => invitationIssuer,
+    // eslint-disable-next-line no-use-before-define
+    () => zoeService,
+  );
+  const getBundleCapById = id => E(vatAdminSvc).getBundleCap(id);
 
   // The ZoeStorageManager composes and consolidates capabilities
   // needed by Zoe according to POLA.
@@ -106,6 +115,8 @@ const makeZoeKit = (
     zoeServicePromiseKit.promise,
     makeZoeInstanceStorageManager,
     unwrapInstallation,
+    zcfBundleCap,
+    getBundleCapById,
   );
 
   // Pass the capabilities necessary to create E(zoe).offer

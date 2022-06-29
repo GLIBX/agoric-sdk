@@ -13,7 +13,7 @@ import {
 
 /**
  * @param {GetBundleCapForID} getBundleCapForID
- * @param {MapStore<string, unknown>} [zoeBaggage]
+ * @param {import('@agoric/vat-data').Baggage} [zoeBaggage]
  */
 export const makeInstallationStorage = (
   getBundleCapForID,
