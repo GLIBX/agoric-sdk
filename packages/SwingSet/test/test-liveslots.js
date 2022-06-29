@@ -669,7 +669,7 @@ test('capdata size limit on syscalls', async t => {
     returnTestHooks,
   );
   const { setSyscallCapdataLimits } = returnTestHooks[0];
-  setSyscallCapdataLimits(130, 2);
+  setSyscallCapdataLimits(130, 1);
 
   log.length = 0; // assume pre-build vatstore operations are correct
   const rootA = 'o+0';
@@ -680,7 +680,7 @@ test('capdata size limit on syscalls', async t => {
   await dispatch(
     makeMessage(rootA, 'sendTooManySlots', [slot0arg], [target], rp1),
   );
-  t.deepEqual(log.shift(), 'fail: syscall capdata slots array too long');
+  t.deepEqual(log.shift(), 'fail: syscall capdata too large');
   t.deepEqual(log.shift(), {
     type: 'resolve',
     resolutions: [[rp1, false, undefinedArg]],
@@ -692,7 +692,7 @@ test('capdata size limit on syscalls', async t => {
   await dispatch(
     makeMessage(rootA, 'sendBodyTooBig', [slot0arg], [target], rp2),
   );
-  t.deepEqual(log.shift(), 'fail: syscall capdata body too large');
+  t.deepEqual(log.shift(), 'fail: syscall capdata too large');
   t.deepEqual(log.shift(), {
     type: 'resolve',
     resolutions: [[rp2, false, undefinedArg]],
@@ -703,7 +703,7 @@ test('capdata size limit on syscalls', async t => {
   await dispatch(
     makeMessage(rootA, 'callTooManySlots', [slot0arg], [device], rp3),
   );
-  t.deepEqual(log.shift(), 'fail: syscall capdata slots array too long');
+  t.deepEqual(log.shift(), 'fail: syscall capdata too large');
   t.deepEqual(log.shift(), {
     type: 'resolve',
     resolutions: [[rp3, false, undefinedArg]],
@@ -714,7 +714,7 @@ test('capdata size limit on syscalls', async t => {
   await dispatch(
     makeMessage(rootA, 'callBodyTooBig', [slot0arg], [device], rp4),
   );
-  t.deepEqual(log.shift(), 'fail: syscall capdata body too large');
+  t.deepEqual(log.shift(), 'fail: syscall capdata too large');
   t.deepEqual(log.shift(), {
     type: 'resolve',
     resolutions: [[rp4, false, undefinedArg]],
@@ -739,7 +739,7 @@ test('capdata size limit on syscalls', async t => {
   t.deepEqual(log.shift(), {
     type: 'exit',
     isFailure: true,
-    info: Error('syscall capdata slots array too long'),
+    info: Error('syscall capdata too large'),
   });
   t.deepEqual(log.shift(), {
     type: 'resolve',
@@ -765,7 +765,7 @@ test('capdata size limit on syscalls', async t => {
   t.deepEqual(log.shift(), {
     type: 'exit',
     isFailure: true,
-    info: Error('syscall capdata body too large'),
+    info: Error('syscall capdata too large'),
   });
   t.deepEqual(log.shift(), {
     type: 'resolve',
@@ -778,7 +778,7 @@ test('capdata size limit on syscalls', async t => {
   t.deepEqual(log.shift(), {
     type: 'exit',
     isFailure: true,
-    info: Error('syscall capdata slots array too long'),
+    info: Error('syscall capdata too large'),
   });
   t.deepEqual(log, []);
 
@@ -787,7 +787,7 @@ test('capdata size limit on syscalls', async t => {
   t.deepEqual(log.shift(), {
     type: 'exit',
     isFailure: true,
-    info: Error('syscall capdata body too large'),
+    info: Error('syscall capdata too large'),
   });
   t.deepEqual(log, []);
 });
@@ -1596,7 +1596,7 @@ test('promise cycle', async t => {
   t.deepEqual(log, []);
 });
 
-test.serial('unserializable promise resolution', async t => {
+test('unserializable promise resolution', async t => {
   // method-bearing objects must be marked as Far, else they cannot be
   // serialized
   const unserializable = harden({ deliberate: () => {} });
@@ -1657,7 +1657,7 @@ test.serial('unserializable promise resolution', async t => {
   t.deepEqual(l2.resolutions[0], [expectedPA, true, expectedError]);
 });
 
-test.serial('unserializable promise rejection', async t => {
+test('unserializable promise rejection', async t => {
   // method-bearing objects must be marked as Far, else they cannot be
   // serialized
   const unserializable = harden({ deliberate: () => {} });
