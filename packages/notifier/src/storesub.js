@@ -2,6 +2,7 @@
 import { E } from '@endo/eventual-send';
 import { Far, makeMarshal } from '@endo/marshal';
 import { observeIteration } from './asyncIterableAdaptor.js';
+import { makeNotifierFromAsyncIterable } from './notifier.js';
 import { makeSubscriptionKit } from './subscriber.js';
 
 /**
@@ -115,5 +116,41 @@ export const makeStoredPublisherKit = (storageNode, marshaller, childPath) => {
   return {
     publisher: publication,
     subscriber,
+  };
+};
+
+/**
+ * @template T
+ * @typedef {object} StoredNotifierKit
+ * @property {Notifier<T>} notifier
+ * @property {IterationObserver<T>} updater
+ */
+
+/**
+ * @template [T=unknown]
+ * @param {ERef<StorageNode>} [storageNode]
+ * @param {ERef<Marshaller>} [marshaller]
+ * @param {string} [childPath]
+ * @returns {StoredNotifierKit<T>}
+ */
+export const makeStoredNotifierKit = (storageNode, marshaller, childPath) => {
+  const { publication, subscription } = makeSubscriptionKit();
+
+  if (storageNode && childPath) {
+    storageNode = E(storageNode).getChildNode(childPath);
+  }
+
+  // wrap the subscription to tee events to storage, repeating to this `subscriber`
+  const subscriber = makeStoredSubscription(
+    subscription,
+    storageNode,
+    marshaller,
+  );
+
+  const notifier = makeNotifierFromAsyncIterable(subscriber);
+
+  return {
+    updater: publication,
+    notifier,
   };
 };
