@@ -11,13 +11,7 @@ import { Far, passStyleOf } from '@endo/marshal';
 import { Nat, isNat } from '@agoric/nat';
 import { assert } from '@agoric/assert';
 
-const managerTypes = [
-  'local',
-  'nodeWorker',
-  'node-subprocess',
-  'xs-worker',
-  'xs-worker-no-gc',
-];
+const managerTypes = ['local', 'nodeWorker', 'node-subprocess', 'xs-worker'];
 
 function producePRR() {
   const { promise, resolve, reject } = makePromiseKit();
