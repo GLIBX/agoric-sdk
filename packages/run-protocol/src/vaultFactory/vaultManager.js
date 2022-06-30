@@ -14,8 +14,10 @@
  */
 import '@agoric/zoe/exported.js';
 
-import { E } from '@endo/eventual-send';
+import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
+import { makeStoredNotifierKit, observeNotifier } from '@agoric/notifier';
+import { defineKindMulti, pickFacet } from '@agoric/vat-data';
 import {
   assertProposalShape,
   ceilDivideBy,
@@ -26,16 +28,13 @@ import {
   makeRatio,
   makeRatioFromAmounts,
 } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
-import { AmountMath } from '@agoric/ertp';
-
-import { defineKindMulti, pickFacet } from '@agoric/vat-data';
-import { makeVault, Phase } from './vault.js';
-import { makePrioritizedVaults } from './prioritizedVaults.js';
-import { liquidate } from './liquidation.js';
-import { makeTracer } from '../makeTracer.js';
-import { chargeInterest } from '../interest.js';
+import { E } from '@endo/eventual-send';
 import { checkDebtLimit, makeMetricsPublisherKit } from '../contractSupport.js';
+import { chargeInterest } from '../interest.js';
+import { makeTracer } from '../makeTracer.js';
+import { liquidate } from './liquidation.js';
+import { makePrioritizedVaults } from './prioritizedVaults.js';
+import { makeVault, Phase } from './vault.js';
 
 const { details: X } = assert;
 
@@ -190,7 +189,10 @@ const initState = (
   // timestamp of most recent update to interest
   const latestInterestUpdate = startTimeStamp;
 
-  const { updater: assetUpdater, notifier: assetNotifier } = makeNotifierKit(
+  /** @type {import('@agoric/notifier').StoredNotifierKit<AssetState>} */
+  const { updater: assetUpdater, notifier: assetNotifier } =
+    makeStoredNotifierKit(storageNode, marshaller, 'asset');
+  assetUpdater.updateState(
     harden({
       compoundedInterest,
       interestRate: fixed.factoryPowers.getGovernedParams().getInterestRate(),

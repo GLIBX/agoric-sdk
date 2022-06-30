@@ -859,7 +859,7 @@ test('vaultFactory display collateral', async t => {
   });
 });
 
-test('interest on multiple vaults', async t => {
+test.only('interest on multiple vaults', async t => {
   const { zoe, aeth, run, rates: defaultRates } = t.context;
   const rates = {
     ...defaultRates,
@@ -965,8 +965,11 @@ test('interest on multiple vaults', async t => {
   await manualTimer.tickN(8);
   await eventLoopIteration();
 
+  console.log('DEBUG getUpdateSince() on assetNotifier');
   const assetUpdate = await E(assetNotifier).getUpdateSince();
+  console.log('DEBUG getUpdateSince() on aliceNotifier');
   const aliceUpdate = await E(aliceNotifier).getUpdateSince();
+  console.log('DEBUG getUpdateSince() on bobNotifier');
   const bobUpdate = await E(bobNotifier).getUpdateSince();
 
   // 160n is initial fee. interest is ~3n/week. compounding is in the noise.
