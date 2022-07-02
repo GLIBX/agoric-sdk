@@ -78,6 +78,7 @@ export const makeZCFZygote = async (
       zoeInstanceAdmin,
       getAssetKindByBrand,
       shutdownWithFailure,
+      zcfBaggage,
     );
 
   const { storeOfferHandler, takeOfferHandler } =

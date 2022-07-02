@@ -589,7 +589,6 @@ export function makeVirtualObjectManager(
     let facetNames;
     let behaviorTemplate;
 
-    console.log(`VOM  DKI  tag: ${tag}, ${kindID}`);
     const facetiousness = assessFacetiousness(behavior);
     switch (facetiousness) {
       case 'one': {

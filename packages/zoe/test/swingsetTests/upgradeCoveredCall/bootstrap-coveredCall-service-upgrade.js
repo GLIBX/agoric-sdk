@@ -30,7 +30,7 @@ export const buildRootObject = () => {
     },
 
     upgradeV2: async () => {
-      const v3BundleId = await E(vatAdmin).getBundleIDByName('coveredCallV2');
+      const v3BundleId = await E(vatAdmin).getBundleIDByName('coveredCallV3');
       // exercise revived contract
 
       await E(instanceAdmin).upgradeContract(v3BundleId);

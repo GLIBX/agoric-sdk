@@ -21,7 +21,7 @@ import { makeZCFZygote } from './zcfZygote.js';
  * @param {import('@agoric/vat-data').Baggage} baggage
  */
 // * @returns {{ executeContract: ExecuteContract}}
-export function buildRootObject(powers, vatParameters, baggage) {
+export async function buildRootObject(powers, vatParameters, baggage) {
   // Currently, there is only one function, `executeContract` called
   // by the Zoe Service. However, when there is kernel support for
   // zygote vats (essentially freezing and then creating copies of
@@ -44,7 +44,7 @@ export function buildRootObject(powers, vatParameters, baggage) {
 
   // make zcfZygote with contract-general state and kinds initialized
   console.log(`VatRoot  ${Array.from(baggage.keys())}`);
-  const zcfZygote = makeZCFZygote(
+  const zcfZygote = await makeZCFZygote(
     powers,
     zoeService,
     invitationIssuer,
