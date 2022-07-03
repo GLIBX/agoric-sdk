@@ -4,7 +4,6 @@ import {
   makeScalarBigMapStore,
   provideDurableWeakMapStore,
 } from '@agoric/vat-data';
-import { assert, details as X } from '@agoric/assert';
 import { E } from '@endo/eventual-send';
 
 import { arrayToObj } from './objArrayConversion.js';

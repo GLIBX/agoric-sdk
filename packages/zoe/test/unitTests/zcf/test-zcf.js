@@ -628,7 +628,7 @@ test('burnLosses - offer safety violation no staged allocation', async t => {
       ),
     {
       message:
-        'The allocation after burning losses {"DownPayment":{"brand":"[Alleged: Yen brand]","value":"[50n]"},"Bonus":{"brand":"[Alleged: Doubloons brand]","value":"[0n]"}} for the zcfSeat was not offer safe',
+        /The allocation after burning losses .* for the zcfSeat was not offer safe/,
     },
   );
   t.truthy(zcfSeat.hasStagedAllocation());

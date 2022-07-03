@@ -18,13 +18,15 @@ export const makeOfferHandlerStorage = zcfBaggage => {
 
   /** @type {(offerHandler: OfferHandler) => InvitationHandle} */
   const storeOfferHandler = offerHandler => {
+    if (typeof offerHandler === 'function') {
+      offerHandler = ToFarFunction('offerHandler', offerHandler);
+    }
     const invitationHandleToHandler = isDurableObject(offerHandler)
       ? invitationHandleToDurableHandler
       : invitationHandleToEphemeralHandler;
 
-    const farOfferHandler = ToFarFunction('offerHandler', offerHandler);
     const invitationHandle = makeInvitationHandle();
-    invitationHandleToHandler.init(invitationHandle, farOfferHandler);
+    invitationHandleToHandler.init(invitationHandle, offerHandler);
     return invitationHandle;
   };
 

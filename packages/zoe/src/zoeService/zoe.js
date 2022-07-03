@@ -18,7 +18,6 @@ import '../internal-types.js';
 import { AssetKind } from '@agoric/ertp';
 import { E } from '@endo/eventual-send';
 import { Far } from '@endo/marshal';
-import { makePromiseKit } from '@endo/promise-kit';
 import { makeScalarBigMapStore } from '@agoric/vat-data';
 
 import { makeZoeStorageManager } from './zoeStorageManager.js';
@@ -55,17 +54,13 @@ const makeZoeKit = (
   zcfSpec = { name: 'zcf' },
   zoeBaggage = makeScalarBigMapStore('zoe baggage', { durable: true }),
 ) => {
-  // We must pass the ZoeService to `makeStartInstance` before it is
-  // defined. See below where the promise is resolved.
-  /** @type {PromiseRecord<ZoeService>} */
-  const zoeServicePromiseKit = makePromiseKit();
-
   const { feeMintAccess, getFeeIssuerKit, feeIssuer, feeBrand } = createFeeMint(
     feeIssuerConfig,
     shutdownZoeVat,
   );
 
-  const getBundleCapFromID = bundleID =>
+  /** @type {GetBundleCapForID} */
+  const getBundleCapForID = bundleID =>
     E(vatAdminSvc).waitForBundleCap(bundleID);
 
   const zcfBundleCap = getZcfBundleCap(zcfSpec, vatAdminSvc);
@@ -80,7 +75,7 @@ const makeZoeKit = (
     // eslint-disable-next-line no-use-before-define
     () => zoeService,
   );
-  const getBundleCapById = id => E(vatAdminSvc).getBundleCap(id);
+  const getBundleCapByIdNow = id => E(vatAdminSvc).getBundleCap(id);
 
   // The ZoeStorageManager composes and consolidates capabilities
   // needed by Zoe according to POLA.
@@ -102,7 +97,7 @@ const makeZoeKit = (
     getProposalSchemaForInvitation,
   } = makeZoeStorageManager(
     createZCFVat,
-    getBundleCapFromID,
+    getBundleCapForID,
     getFeeIssuerKit,
     shutdownZoeVat,
     feeIssuer,
@@ -112,11 +107,10 @@ const makeZoeKit = (
 
   // Pass the capabilities necessary to create E(zoe).startInstance
   const startInstance = makeStartInstance(
-    zoeServicePromiseKit.promise,
     makeZoeInstanceStorageManager,
     unwrapInstallation,
     zcfBundleCap,
-    getBundleCapById,
+    getBundleCapByIdNow,
   );
 
   // Pass the capabilities necessary to create E(zoe).offer
@@ -173,11 +167,6 @@ const makeZoeKit = (
     getBundleIDFromInstallation,
     getProposalSchemaForInvitation,
   });
-
-  // startInstance must pass the ZoeService to the newly created ZCF
-  // vat, but the zoeService is not yet defined when startInstance is
-  // defined. So, we pass a promise and then resolve the promise here.
-  zoeServicePromiseKit.resolve(zoeService);
 
   return harden({
     zoeService,

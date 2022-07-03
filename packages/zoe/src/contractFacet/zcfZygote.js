@@ -149,25 +149,29 @@ export const makeZCFZygote = async (
   ) => {
     assertUniqueKeyword(keyword);
 
-    const zoeMintP = E(zoeInstanceAdmin).makeZoeMint(
+    // TODO is this AWAIT ok? Or does this need atomicity?
+    // We probably need the same keyword reservation logic that
+    // was added to addPool
+    const zoeMint = await E(zoeInstanceAdmin).makeZoeMint(
       keyword,
       assetKind,
       displayInfo,
     );
     // @ts-expect-error type issues?
-    return zcfMintFactory.makeZcfMint(keyword, zoeMintP);
+    return zcfMintFactory.makeZCFMintInternal(keyword, zoeMint);
   };
 
   /** @type {ZCFRegisterFeeMint} */
   const registerFeeMint = async (keyword, feeMintAccess) => {
     assertUniqueKeyword(keyword);
 
-    const zoeMintP = E(zoeInstanceAdmin).registerFeeMint(
+    // TODO is this AWAIT ok? Or does this need atomicity?
+    const zoeMint = await E(zoeInstanceAdmin).registerFeeMint(
       keyword,
       feeMintAccess,
     );
     // @ts-expect-error type issues?
-    return zcfMintFactory.makeZcfMint(keyword, zoeMintP);
+    return zcfMintFactory.makeZCFMintInternal(keyword, zoeMint);
   };
 
   /** @type {ZCF} */
@@ -281,7 +285,16 @@ export const makeZCFZygote = async (
   };
   // evaluate the contract (either the first version, or an upgrade). start is
   // from a non-upgradeable contract, setupInstallation for upgradeable ones.
-  const { setupInstallation, start } = await evaluateContract();
+  const { setupInstallation, start, buildRootObject } =
+    await evaluateContract();
+
+  if (start === undefined && setupInstallation === undefined) {
+    assert(
+      buildRootObject === undefined,
+      X`Did you provide a vat bundle instead of a contract bundle?`,
+    );
+    assert.fail(X`unrecognized contract exports`);
+  }
 
   const contractBaggage = provideDurableMapStore(zcfBaggage, 'contractBaggage');
 

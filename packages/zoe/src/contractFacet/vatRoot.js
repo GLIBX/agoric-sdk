@@ -15,6 +15,8 @@ import '../internal-types.js';
 
 import { makeZCFZygote } from './zcfZygote.js';
 
+const { details: X } = assert;
+
 /**
  * @param {VatPowers & { testJigSetter: TestJigSetter }} powers
  * @param {{contractBundleCap: BundleCap, zoeService: ZoeService, invitationIssuer: Issuer}} vatParameters
@@ -29,6 +31,10 @@ export async function buildRootObject(powers, vatParameters, baggage) {
   // `zcfZygote.startContract` should exposed separately.
   const { testJigSetter } = powers;
   const { contractBundleCap } = vatParameters;
+  assert(
+    contractBundleCap !== undefined,
+    X`expected vatParameters.contractBundleCap ${vatParameters}`,
+  );
   let { zoeService, invitationIssuer } = vatParameters;
   const didStart = baggage.has('DidStart');
   if (didStart) {

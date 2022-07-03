@@ -13,24 +13,21 @@ import { handlePKitWarning } from '../handleWarning.js';
 const { details: X, quote: q } = assert;
 
 /**
- * @param {Promise<ZoeService>} zoeServicePromise
  * @param {MakeZoeInstanceStorageManager} makeZoeInstanceStorageManager
  * @param {UnwrapInstallation} unwrapInstallation
  * @param {ERef<BundleCap>} zcfBundleCapP
- * @param {(id: string) => BundleCap} getBundleCapById
+ * @param {(id: string) => BundleCap} getBundleCapByIdNow
  * @param {import('@agoric/vat-data').Baggage} [zoeBaggage]
  * @returns {import('./utils.js').StartInstance}
  */
 export const makeStartInstance = (
-  zoeServicePromise,
   makeZoeInstanceStorageManager,
   unwrapInstallation,
   zcfBundleCapP,
-  getBundleCapById,
+  getBundleCapByIdNow,
   zoeBaggage = makeScalarBigMapStore('zoe baggage', { durable: true }),
 ) => {
   const makeInstanceHandle = defineDurableHandle(zoeBaggage, 'Instance');
-  // TODO(MSM): Should be 'Seat' rather than 'SeatHandle'
   const makeSeatHandle = defineDurableHandle(zoeBaggage, 'Seat');
 
   const startInstance = async (
@@ -273,7 +270,9 @@ export const makeStartInstance = (
           });
         },
         upgradeContract: async (contractBundleId, _newPrivateArgs) => {
-          const newContractBundleCap = await getBundleCapById(contractBundleId);
+          const newContractBundleCap = await getBundleCapByIdNow(
+            contractBundleId,
+          );
           const vatParameters = { contractBundleCap: newContractBundleCap };
           return E(adminNode).upgrade(zcfBundleCapResult.value, {
             vatParameters,

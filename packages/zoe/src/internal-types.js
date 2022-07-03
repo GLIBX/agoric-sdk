@@ -250,6 +250,7 @@
  * promise will fulfill to the completion value.
  * @property {ShutdownWithFailure} terminateWithFailure
  * Terminate the vat in which the contract is running as a failure.
+ * @property {(bundleCap: BundleCap, options?: Record<string, any>) => Promise<RootAndAdminNode>} upgrade
  */
 
 /**
@@ -297,6 +298,7 @@
  * @param {ERef<ZoeInstanceAdmin>} zoeInstanceAdmin
  * @param {GetAssetKindByBrand} getAssetKindByBrand
  * @param {ShutdownWithFailure} shutdownWithFailure
+ * @param {import('@agoric/vat-data').Baggage} zcfBaggage
  * @returns {{ makeZCFSeat: MakeZCFSeat,
     reallocate: Reallocate,
     reallocateForZCFMint: ReallocateForZCFMint,

@@ -39,12 +39,12 @@ export const makeZCFMintFactory = async (
    */
   const provideDurableZcfMint = async zcfMintBaggage => {
     const keyword = zcfMintBaggage.get('keyword');
-    const zoeMintP = zcfMintBaggage.get('zoeMintP');
+    const zoeMint = zcfMintBaggage.get('zoeMint');
     const {
       brand: mintyBrand,
       issuer: mintyIssuer,
       displayInfo: mintyDisplayInfo,
-    } = await E(zoeMintP).getIssuerRecord();
+    } = await E(zoeMint).getIssuerRecord();
     // AWAIT
     const mintyIssuerRecord = makeIssuerRecord(
       mintyBrand,
@@ -105,7 +105,7 @@ export const makeZCFMintFactory = async (
           // committed atomically, but it is not a disaster if they are
           // not. If we minted only, no one would ever get those
           // invisibly-minted assets.
-          E(zoeMintP).mintAndEscrow(totalToMint);
+          E(zoeMint).mintAndEscrow(totalToMint);
           reallocateForZCFMint(zcfSeat, allocationPlusGains);
           return zcfSeat;
         },
@@ -124,7 +124,7 @@ export const makeZCFMintFactory = async (
           // verifies offer safety
           assert(
             zcfSeat.isOfferSafe(allocationMinusLosses),
-            `The allocation after burning losses ${allocationMinusLosses}for the zcfSeat was not offer safe`,
+            `The allocation after burning losses ${allocationMinusLosses} for the zcfSeat was not offer safe`,
           );
 
           // Decrement the stagedAllocation if it exists so that the
@@ -139,30 +139,35 @@ export const makeZCFMintFactory = async (
           // not. If we only commit the allocationMinusLosses no one would
           // ever get the unburned assets.
           reallocateForZCFMint(zcfSeat, allocationMinusLosses);
-          E(zoeMintP).withdrawAndBurn(totalToBurn);
+          E(zoeMint).withdrawAndBurn(totalToBurn);
         },
       },
     );
   };
 
-  const makeDurableZcfMint = async (keyword, zoeMintP, zcfMintBaggage) => {
+  const makeDurableZcfMint = async (keyword, zoeMint, zcfMintBaggage) => {
     zcfMintBaggage.init('keyword', keyword);
-    zcfMintBaggage.init('zoeMintP', zoeMintP);
+    zcfMintBaggage.init('zoeMint', zoeMint);
     return provideDurableZcfMint(zcfMintBaggage);
   };
 
   /**
-   * zcfMintFactory has a method makeZcfMint() that takes a keyword and the
-   * promise returned by a makeZoeMint() call. makeZcfMint() creates a new
+   * zcfMintFactory has a method makeZCFMintInternal() that takes a keyword and the
+   * promise returned by a makeZoeMint() call. makeZCFMintInternal() creates a new
    * baggage for the state of the zcfMint, makes a durableZcfMint from that
    * baggage, and registers that baggage to be revived with the factory.
    */
   const zcfMintFactory = ProvideFar(zcfBaggage, 'zcfMintFactory', {
-    makeZcfMint: (keyword, zoeMintP) => {
+    makeZCFMintInternal: async (keyword, zoeMint) => {
       const zcfMintBaggage = makeScalarBigMapStore('zcfMintBaggage', {
         durable: true,
       });
-      const zcfMint = makeDurableZcfMint(keyword, zoeMintP, zcfMintBaggage);
+      // TODO is this AWAIT ok? Or does this need atomicity?
+      const zcfMint = await makeDurableZcfMint(
+        keyword,
+        zoeMint,
+        zcfMintBaggage,
+      );
       zcfMintBaggageSet.add(zcfMint);
       return zcfMint;
     },

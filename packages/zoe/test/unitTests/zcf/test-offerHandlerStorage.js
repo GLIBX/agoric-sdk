@@ -19,6 +19,6 @@ test('offerHandlerStorage', async t => {
   // Getting the offerHandler also deletes it for explicit GC, so trying to get
   // it twice errors.
   t.throws(() => takeOfferHandler(invitationHandle), {
-    message: '"invitationHandle" not found: "[Alleged: InvitationHandle]"',
+    message: /offerHandler may not have survived upgrade/,
   });
 });

@@ -23,7 +23,6 @@ export const buildRootObject = () => {
       const installation = await E(zoeService).installBundleID(v2BundleId);
 
       const facets = await E(zoeService).startInstance(installation);
-      const { creatorFacet } = facets;
       ({ adminFacet: instanceAdmin } = facets);
 
       return true;
