@@ -198,6 +198,11 @@ export function makeVirtualObjectManager(
   unserialize,
   cacheSize,
 ) {
+  const isDurableObject = specimen => {
+    const capData = serialize(specimen);
+    return capData.slots.every(vrm.isDurable);
+  };
+
   const cache = makeCache(cacheSize, fetch, store);
 
   // WeakMap tieing VO components together, to prevent anyone who retains one
@@ -647,7 +652,9 @@ export function makeVirtualObjectManager(
               after.slots.forEach((vref, index) => {
                 assert(
                   vrm.isDurable(vref),
-                  X`value for ${prop} is not durable at slot ${index} of ${after}`,
+                  X`value for ${q(prop)} is not durable at slot ${q(
+                    index,
+                  )} of ${after}`,
                 );
               });
             }
@@ -732,7 +739,7 @@ export function makeVirtualObjectManager(
         const data = serialize(initialData[prop]);
         if (durable) {
           data.slots.forEach(vref => {
-            assert(vrm.isDurable(vref), X`value for ${prop} is not durable`);
+            assert(vrm.isDurable(vref), X`value for ${q(prop)} is not durable`);
           });
         }
         data.slots.forEach(vrm.addReachableVref);
@@ -955,6 +962,7 @@ export function makeVirtualObjectManager(
     setCacheSize,
     flushCache: cache.flush,
     testHooks,
+    isDurableObject,
   });
 }
 /**
