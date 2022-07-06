@@ -1,4 +1,5 @@
 import { Far } from '@endo/marshal';
+import { E } from '@endo/eventual-send';
 import { makePromiseKit } from '@endo/promise-kit';
 import {
   makeKindHandle,
@@ -137,9 +138,14 @@ export const buildRootObject = (_vatPowers, vatParameters, baggage) => {
   const { promise: p1 } = makePromiseKit();
   const { promise: p2 } = makePromiseKit();
   let heldPromise;
+  let counter = 0;
 
   baggage.init('data', harden(['some', 'data']));
   baggage.init('durandalHandle', durandalHandle);
+
+  if (vatParameters?.handler) {
+    E(vatParameters.handler).ping('hello from v1');
+  }
 
   return Far('root', {
     getVersion: () => 'v1',
@@ -165,6 +171,10 @@ export const buildRootObject = (_vatPowers, vatParameters, baggage) => {
 
     makeLostKind: () => {
       makeKindHandle('unhandled', []);
+    },
+    pingback: handler => {
+      counter += 1;
+      return E(handler).ping(`ping ${counter}`);
     },
   });
 };

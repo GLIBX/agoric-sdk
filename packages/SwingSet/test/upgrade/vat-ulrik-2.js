@@ -1,4 +1,5 @@
 import { Far } from '@endo/marshal';
+import { E } from '@endo/eventual-send';
 import { assert } from '@agoric/assert';
 import { defineDurableKind } from '@agoric/vat-data';
 
@@ -15,8 +16,17 @@ const behavior = {
 };
 
 export const buildRootObject = (_vatPowers, vatParameters, baggage) => {
+  let counter = 20;
   const durandalHandle = baggage.get('durandalHandle');
   defineDurableKind(durandalHandle, initialize, behavior);
+
+  if (vatParameters?.handler) {
+    E(vatParameters.handler).ping('hello from v2');
+  }
+
+  if (vatParameters?.explode) {
+    throw Error(vatParameters.explode);
+  }
 
   const root = Far('root', {
     getVersion: () => 'v2',
@@ -40,6 +50,10 @@ export const buildRootObject = (_vatPowers, vatParameters, baggage) => {
       const imp37 = baggage.get('dur37').getImport();
       const imp38 = baggage.get('imp38');
       return { imp33, imp35, imp37, imp38 };
+    },
+    pingback: handler => {
+      counter += 1;
+      return E(handler).ping(`ping ${counter}`);
     },
   });
   // exercise async return
