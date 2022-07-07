@@ -19,6 +19,7 @@ test('ertp service upgrade', async t => {
         sourceSpec: bfile('bootstrap-coveredCall-service-upgrade.js'),
       },
       zoe: { sourceSpec: bfile('./vat-zoe.js') },
+      ertp: { sourceSpec: bfile('./vat-ertp-service.js') },
     },
     bundles: {
       zcf: { sourceSpec: bfile('../../../src/contractFacet/vatRoot.js') },
@@ -38,6 +39,7 @@ test('ertp service upgrade', async t => {
     const kpid = c.queueToVatRoot('bootstrap', name, args);
     await c.run();
     const status = c.kpStatus(kpid);
+    console.log(`TEST   ${status}`);
     const capdata = c.kpResolution(kpid);
     return [status, capdata];
   };

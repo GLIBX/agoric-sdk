@@ -13,7 +13,7 @@ import {
   provideDurableIssuerKit,
 } from '../../../src';
 
-function provideErtpService(baggage, exitVatWithFailure) {
+export const provideErtpService = (baggage, exitVatWithFailure) => {
   const issuerBaggageSet = provideDurableSetStore(baggage, 'BaggageSet');
   const ertpService = ProvideFar(baggage, 'ERTPService', {
     makeIssuerKit: (
@@ -42,7 +42,7 @@ function provideErtpService(baggage, exitVatWithFailure) {
   }
 
   return ertpService;
-}
+};
 
 export const buildRootObject = async (vatPowers, _vatParams, baggage) => {
   const ertpService = provideErtpService(baggage, vatPowers.exitVatWithFailure);

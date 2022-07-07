@@ -82,20 +82,16 @@ const setupInstallation = (installationBaggage, zcf) => {
     'instance',
   );
 
-  console.log(`CC-Durable  setupInstallation`);
   const makeExerciserKindHandle = provideKindHandle(
     instanceBaggage,
     'makeExerciserKindHandle',
   );
 
-  console.log(
-    `V2  defineDurable makeExerciserKindHandle  ${makeExerciserKindHandle}`,
-  );
   const makeExerciser = defineDurableKind(
     makeExerciserKindHandle,
     sellSeat => ({ sellSeat }),
     {
-      exerciseOption: ({ state: { sellSeat } }, buySeat) => {
+      handle: ({ state: { sellSeat } }, buySeat) => {
         assert(!sellSeat.hasExited(), sellSeatExpiredMsg);
         try {
           swapExact(zcf, sellSeat, buySeat);
@@ -121,14 +117,13 @@ const setupInstallation = (installationBaggage, zcf) => {
     );
 
     const exerciseOption = makeExerciser(sellSeat);
-
     const customProps = harden({
       expirationDate: sellSeatExitRule.afterDeadline.deadline,
       timeAuthority: sellSeatExitRule.afterDeadline.timer,
       underlyingAssets: sellSeat.getProposal().give,
       strikePrice: sellSeat.getProposal().want,
     });
-    // @ts-expect-error durable functions need typing
+    // @ts-expect-error durable handlers need typing
     return zcf.makeInvitation(exerciseOption, 'exerciseOption', customProps);
   };
 
@@ -138,7 +133,7 @@ const setupInstallation = (installationBaggage, zcf) => {
     const makeInstanceKit = () => {
       // the creatorFacet could be made durable for this demonstration, but if
       // it's not initiated before upgrade, there's no state to lose.
-      const creatorFacet = Far('creatorFaet', {
+      const creatorFacet = Far('creatorFacet', {
         makeInvitation: () => zcf.makeInvitation(makeOption, 'makeCallOption'),
       });
       return harden({ creatorFacet });

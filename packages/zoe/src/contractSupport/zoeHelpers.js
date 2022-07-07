@@ -81,8 +81,10 @@ export const swapExact = (zcf, leftSeat, rightSeat) => {
     leftSeat.decrementBy(harden(leftSeat.getProposal().give));
     rightSeat.incrementBy(harden(rightSeat.getProposal().want));
 
+    console.log(` ZH  swapExact reallocate`);
     zcf.reallocate(leftSeat, rightSeat);
   } catch (err) {
+    console.log(` ZH  ZH   swap err  ${err}`);
     leftSeat.fail(err);
     rightSeat.fail(err);
     throw err;

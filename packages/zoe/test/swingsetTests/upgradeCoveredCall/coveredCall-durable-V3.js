@@ -91,9 +91,11 @@ const setupInstallation = (installationBaggage, zcf) => {
     makeExerciserKindHandle,
     sellSeat => ({ sellSeat }),
     {
-      exerciseOption: ({ state: { sellSeat } }, buySeat) => {
+      handle: ({ state: { sellSeat } }, buySeat) => {
         assert(!sellSeat.hasExited(), sellSeatExpiredMsg);
         try {
+          console.log(`V3   swap  ${sellSeat}, ${buySeat}`);
+
           swapExact(zcf, sellSeat, buySeat);
         } catch (err) {
           console.log(
@@ -101,7 +103,7 @@ const setupInstallation = (installationBaggage, zcf) => {
           );
           throw err;
         }
-        zcf.shutdown('Swap completed.');
+        zcf.shutdown('Swap (upgraded) completed.');
         return `The upgraded option was exercised. Please collect the assets in your payout.`;
       },
     },
@@ -117,14 +119,13 @@ const setupInstallation = (installationBaggage, zcf) => {
     );
 
     const exerciseOption = makeExerciser(sellSeat);
-
     const customProps = harden({
       expirationDate: sellSeatExitRule.afterDeadline.deadline,
       timeAuthority: sellSeatExitRule.afterDeadline.timer,
       underlyingAssets: sellSeat.getProposal().give,
       strikePrice: sellSeat.getProposal().want,
     });
-    // @ts-expect-error durable functions need typing
+    // @ts-expect-error durable handlers need typing
     return zcf.makeInvitation(exerciseOption, 'exerciseOption', customProps);
   };
 
@@ -134,7 +135,7 @@ const setupInstallation = (installationBaggage, zcf) => {
     const makeInstanceKit = () => {
       // the creatorFacet could be made durable for this demonstration, but if
       // it's not initiated before upgrade, there's no state to lose.
-      const creatorFacet = Far('creatorFaet', {
+      const creatorFacet = Far('creatorFacet', {
         makeInvitation: () => zcf.makeInvitation(makeOption, 'makeCallOption'),
       });
       return harden({ creatorFacet });

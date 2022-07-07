@@ -9,6 +9,8 @@ import { assertPattern } from '@agoric/store';
 import {
   makeScalarBigMapStore,
   provideDurableMapStore,
+  provideKindHandle,
+  defineDurableKind,
 } from '@agoric/vat-data';
 
 import { cleanProposal } from '../cleanProposal.js';
@@ -56,13 +58,14 @@ export const makeZCFZygote = async (
   const zoeInstanceAdminPromiseKit = makePromiseKit();
   const zoeInstanceAdmin = zoeInstanceAdminPromiseKit.promise;
 
+  console.log(`ZZ   start    ${Array.from(zcfBaggage.keys())}`);
   const {
     storeIssuerRecord,
     getAssetKindByBrand,
     getBrandForIssuer,
     getIssuerForBrand,
     instantiate: instantiateIssuerStorage,
-  } = makeIssuerStorage();
+  } = makeIssuerStorage(zcfBaggage);
 
   /** @type {ShutdownWithFailure} */
   const shutdownWithFailure = reason => {
@@ -246,31 +249,37 @@ export const makeZCFZygote = async (
     getInstance: () => getInstanceRecord().instance,
   });
 
+  const handleOfferHandle = provideKindHandle(zcfBaggage, 'handleOfferObj');
   // handleOfferObject gives Zoe the ability to notify ZCF when a new seat is
   // added in offer(). ZCF responds with the exitObj and offerResult.
-  /** @type {HandleOfferObj} */
-  const handleOfferObj = Far('handleOfferObj', {
-    handleOffer: (invitationHandle, seatData) => {
+  const makeHandleOfferObj = defineDurableKind(handleOfferHandle, () => ({}), {
+    handleOffer: (_context, invitationHandle, seatData) => {
+      console.log(`ZZ  Hanlde offer`);
       const zcfSeat = makeZCFSeat(seatData);
       // TODO: provide a details that's a better diagnostic for the
       // ephemeral offerHandler that did not survive upgrade.
       const offerHandler = takeOfferHandler(invitationHandle);
-      const offerResultP = E(offerHandler)(zcfSeat, seatData.offerArgs).catch(
-        reason => {
-          if (reason === undefined) {
-            const newErr = new Error(
-              `If an offerHandler throws, it must provide a reason of type Error, but the reason was undefined. Please fix the contract code to specify a reason for throwing.`,
-            );
-            throw zcfSeat.fail(newErr);
-          }
-          throw zcfSeat.fail(reason);
-        },
-      );
+      const offerResultP =
+        typeof offerHandler === 'function'
+          ? E(offerHandler)(zcfSeat, seatData.offerArgs)
+          : // @ts-expect-error Type issues?
+            E(offerHandler).handle(zcfSeat, seatData.offerArgs);
+
+      offerResultP.catch(reason => {
+        if (reason === undefined) {
+          const newErr = new Error(
+            `If an offerHandler throws, it must provide a reason of type Error, but the reason was undefined. Please fix the contract code to specify a reason for throwing.`,
+          );
+          throw zcfSeat.fail(newErr);
+        }
+        throw zcfSeat.fail(reason);
+      });
       const exitObj = makeExitObj(seatData.proposal, zcfSeat);
       /** @type {HandleOfferResult} */
       return harden({ offerResultP, exitObj });
     },
   });
+  const handleOfferObj = makeHandleOfferObj();
 
   const evaluateContract = () => {
     let bundle;
@@ -304,10 +313,13 @@ export const makeZCFZygote = async (
     const result = E.when(
       start(zcf, privateArgs),
       ({
-        creatorFacet = Far('emptyCreatorFacet', {}),
-        publicFacet = Far('emptyPublicFacet', {}),
+        // TODO (CTH)  does this work?
+
+        creatorFacet = undefined,
+        publicFacet = undefined,
         creatorInvitation = undefined,
       }) => {
+        console.log(`ZZ  building CLASSIC contract`);
         return harden({
           creatorFacet,
           publicFacet,
@@ -330,6 +342,7 @@ export const makeZCFZygote = async (
 
     // TODO:   should zcf be available to the contract at this point?
 
+    console.log(`ZZ   setupInstallation  ${contractBaggage}`);
     setupInstanceP = setupInstallation(contractBaggage, zcf);
   }
 
@@ -358,7 +371,10 @@ export const makeZCFZygote = async (
       issuerStorageFromZoe,
       privateArgs = undefined,
     ) => {
+      console.log(`ZZ  startContract  ${Array.from(contractBaggage.keys())}`);
+
       zoeInstanceAdminPromiseKit.resolve(instanceAdminFromZoe);
+      zcfBaggage.init('instanceAdmin', instanceAdminFromZoe);
       instantiateInstanceRecordStorage(instanceRecordFromZoe);
       instantiateIssuerStorage(issuerStorageFromZoe);
 
@@ -382,10 +398,11 @@ export const makeZCFZygote = async (
       return upgradeableResult;
     },
     restartContract: async (privateArgs = undefined) => {
+      console.log(`ZZ  restartCont  ${Array.from(contractBaggage.keys())}`);
+      zoeInstanceAdminPromiseKit.resolve(zcfBaggage.get('instanceAdmin'));
+
       // For version-2 or later, we know we've already been started, so
       // allow the contract to set up its instance Kinds
-      const perInstanceZoeStuff = contractBaggage.get('perInstanceZoeStuff');
-      perInstanceZoeStuff();
 
       // now that our clone is differentiated, we can do
       // instance-specific setup and get back the contract runner

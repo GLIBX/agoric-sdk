@@ -48,6 +48,8 @@ export async function buildRootObject(powers, vatParameters, baggage) {
     baggage.init('invitationIssuer', invitationIssuer);
   }
 
+  console.log(`VATROOT BEGIN`);
+
   // make zcfZygote with contract-general state and kinds initialized
   console.log(`VatRoot  ${Array.from(baggage.keys())}`);
   const zcfZygote = await makeZCFZygote(
@@ -74,6 +76,7 @@ export async function buildRootObject(powers, vatParameters, baggage) {
       assert(!didStart);
       // bikeshed: the outer and inner messages shouldn't both be startContract
       /** @type {ZCFZygote} */
+      console.log(`VATROOT   start`);
       return E(zcfZygote).startContract(
         zoeInstanceAdmin,
         instanceRecordFromZoe,
@@ -91,6 +94,7 @@ export async function buildRootObject(powers, vatParameters, baggage) {
       // upgrade might supplement this
     ) => {
       assert(!didStart);
+      console.log(`VATROOT   restart`);
       /** @type {ZCFZygote} */
       return E(zcfZygote).restartContract(privateArgs);
     },

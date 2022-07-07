@@ -10,6 +10,8 @@ import { arrayToObj } from './objArrayConversion.js';
 import { cleanKeywords } from './cleanProposal.js';
 import { makeIssuerRecord } from './issuerRecord.js';
 
+const STORAGE_INSTANTIATED_KEY = 'IssuerStorageInstantiated';
+
 /**
  * Make the Issuer Storage.
  *
@@ -29,7 +31,7 @@ export const makeIssuerStorage = (
     'issuerToIssuerRecord',
   );
 
-  let instantiated = false;
+  let instantiated = zcfBaggage.has(STORAGE_INSTANTIATED_KEY);
   const assertInstantiated = () =>
     assert(instantiated, 'issuerStorage has not been instantiated');
 
@@ -195,9 +197,10 @@ export const makeIssuerStorage = (
 
   const instantiate = (issuerRecords = []) => {
     assert(
-      instantiated === false,
+      !zcfBaggage.has(STORAGE_INSTANTIATED_KEY),
       'issuerStorage can only be instantiated once',
     );
+    zcfBaggage.init(STORAGE_INSTANTIATED_KEY, true);
     instantiated = true;
     issuerRecords.forEach(storeIssuerRecord);
   };

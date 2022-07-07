@@ -146,10 +146,16 @@ export const makeStartInstance = (
 
           E(handleOfferObjPromiseKit.promise)
             .handleOffer(invitationHandle, seatData)
-            .then(({ offerResultP, exitObj }) => {
-              offerResultPromiseKit.resolve(offerResultP);
-              exitObjPromiseKit.resolve(exitObj);
-            });
+            .then(
+              ({ offerResultP, exitObj }) => {
+                offerResultPromiseKit.resolve(offerResultP);
+                exitObjPromiseKit.resolve(exitObj);
+              },
+              err => {
+                adminNode.terminateWithFailure(err);
+                throw err;
+              },
+            );
 
           // return the userSeat before the offerHandler is called
           return userSeat;
@@ -206,8 +212,11 @@ export const makeStartInstance = (
       makeZoeMint: zoeInstanceStorageManager.makeZoeMint,
       registerFeeMint: zoeInstanceStorageManager.registerFeeMint,
       replaceAllocations: seatHandleAllocations => {
+        console.log(`SI  alloc: ${q(seatHandleAllocations)}`);
         try {
           seatHandleAllocations.forEach(({ seatHandle, allocation }) => {
+            console.log(`SI  replacing   ${q(allocation)}`);
+
             const zoeSeatAdmin = seatHandleToZoeSeatAdmin.get(seatHandle);
             zoeSeatAdmin.replaceAllocation(allocation);
           });
@@ -270,6 +279,7 @@ export const makeStartInstance = (
           });
         },
         upgradeContract: async (contractBundleId, _newPrivateArgs) => {
+          console.log(`SI   upgrading`);
           const newContractBundleCap = await getBundleCapByIdNow(
             contractBundleId,
           );
@@ -283,6 +293,8 @@ export const makeStartInstance = (
       // Actually returned to the user.
       return {
         creatorFacet,
+
+        // TODO(cth) suppress this for upgradeable contracts
         creatorInvitation,
         instance,
         publicFacet,

@@ -2,12 +2,14 @@
 
 import {
   provideDurableWeakMapStore,
+  provideDurableMapStore,
   makeScalarBigMapStore,
   provideKindHandle,
   defineDurableKind,
   dropContext,
+  isDurableObject,
 } from '@agoric/vat-data';
-import { makeWeakStore, makeStore } from '@agoric/store';
+import { makeWeakStore } from '@agoric/store';
 import { E } from '@endo/eventual-send';
 import { AmountMath } from '@agoric/ertp';
 
@@ -16,7 +18,7 @@ import { assertRightsConserved } from './rightsConservation.js';
 import { addToAllocation, subtractFromAllocation } from './allocationMath.js';
 import { coerceAmountKeywordRecord } from '../cleanProposal.js';
 
-const { details: X } = assert;
+const { details: X, quote: q } = assert;
 
 /** @type {CreateSeatManager} */
 export const createSeatManager = (
@@ -26,12 +28,44 @@ export const createSeatManager = (
   zcfBaggage = makeScalarBigMapStore('zcfBaggage', { durable: true }),
 ) => {
   /** @type {WeakStore<ZCFSeat, Allocation>}  */
-  let activeZCFSeats = provideDurableWeakMapStore(zcfBaggage, 'zcfSeat');
+  let activeZCFSeats = provideDurableWeakMapStore(zcfBaggage, 'activeZCFSeats');
   /** @type {Store<ZCFSeat, Allocation>} */
-  const zcfSeatToStagedAllocations = makeStore('zcfSeat');
+  const zcfSeatToStagedAllocations = provideDurableMapStore(
+    zcfBaggage,
+    'zcfSeatToStagedAllocations',
+  );
 
   /** @type {WeakStore<ZCFSeat, SeatHandle>} */
-  let zcfSeatToSeatHandle = makeWeakStore('zcfSeat');
+  const zcfSeatToDurableSeatHandle = provideDurableWeakMapStore(
+    zcfBaggage,
+    'zcfSeatToSeatHandle',
+  );
+
+  /** @type {WeakStore<ZCFSeat, SeatHandle>} */
+  const zcfSeatToEphemeralSeatHandle = makeWeakStore('zcfSeat');
+
+  const getSeatHandle = zcfSeat => {
+    if (zcfSeatToDurableSeatHandle.has(zcfSeat)) {
+      return zcfSeatToDurableSeatHandle.get(zcfSeat);
+    }
+    return zcfSeatToEphemeralSeatHandle.get(zcfSeat);
+  };
+
+  const hasSeatHandle = zcfSeat =>
+    zcfSeatToDurableSeatHandle.has(zcfSeat) ||
+    zcfSeatToEphemeralSeatHandle.has(zcfSeat);
+
+  const initSeatHandle = (zcfSeat, seatHandle) => {
+    if (!Object.isFrozen(seatHandle)) {
+      console.log(`ZCFSeat init   not frozen`);
+    }
+    if (isDurableObject(harden(seatHandle))) {
+      console.log(`ZCFSeat initDur   ${seatHandle}`);
+      return zcfSeatToDurableSeatHandle.init(zcfSeat, seatHandle);
+    }
+    console.log(`ZCFSeat initEph   ${seatHandle}`);
+    return zcfSeatToEphemeralSeatHandle.init(zcfSeat, seatHandle);
+  };
 
   /** @type {(zcfSeat: ZCFSeat) => boolean} */
   const hasExited = zcfSeat => !activeZCFSeats.has(zcfSeat);
@@ -112,6 +146,7 @@ export const createSeatManager = (
   };
 
   const setStagedAllocation = (zcfSeat, newStagedAllocation) => {
+    harden(newStagedAllocation);
     if (zcfSeatToStagedAllocations.has(zcfSeat)) {
       zcfSeatToStagedAllocations.set(zcfSeat, newStagedAllocation);
     } else {
@@ -142,7 +177,7 @@ export const createSeatManager = (
 
       const seatHandleAllocations = [
         {
-          seatHandle: zcfSeatToSeatHandle.get(zcfSeat),
+          seatHandle: getSeatHandle(zcfSeat),
           allocation: newAllocation,
         },
       ];
@@ -174,7 +209,6 @@ export const createSeatManager = (
 
     const newAllocations = seats.map(seat => seat.getStagedAllocation());
     const newAmounts = flattenAllocations(newAllocations);
-
     assertRightsConserved(previousAmounts, newAmounts);
 
     // Ensure that offer safety holds.
@@ -189,10 +223,7 @@ export const createSeatManager = (
     const zcfSeatsSoFar = new Set();
 
     seats.forEach(seat => {
-      assert(
-        zcfSeatToSeatHandle.has(seat),
-        X`The seat ${seat} was not recognized`,
-      );
+      assert(hasSeatHandle(seat), X`The seat ${seat} was not recognized`);
       assert(
         !zcfSeatsSoFar.has(seat),
         X`Seat (${seat}) was already an argument to reallocate`,
@@ -217,12 +248,17 @@ export const createSeatManager = (
       seats.forEach(commitStagedAllocation);
 
       const seatHandleAllocations = seats.map(seat => {
-        const seatHandle = zcfSeatToSeatHandle.get(seat);
+        const seatHandle = getSeatHandle(seat);
         return { seatHandle, allocation: seat.getCurrentAllocation() };
       });
+      console.log(`ZCFSeat  allocations  ${q(seatHandleAllocations)}`);
+      console.log(`ZCFSeat  allocation  ${q(zoeInstanceAdmin)}`);
 
-      E(zoeInstanceAdmin).replaceAllocations(seatHandleAllocations);
+      E(zoeInstanceAdmin)
+        .replaceAllocations(seatHandleAllocations)
+        .catch(e => console.log(`ZCFSeat err in reallocate: ${e}`));
     } catch (err) {
+      console.log(`ZCFSeat ERRR `);
       shutdownWithFailure(err);
       throw err;
     }
@@ -243,20 +279,18 @@ export const createSeatManager = (
 
   const zcfSeatKindHandle = provideKindHandle(zcfBaggage, 'zcfSeat');
 
-  console.log(`ZCFSeat  defineDurable ${zcfSeatKindHandle}`);
-
   const makeZCFSeatInternal = defineDurableKind(
     zcfSeatKindHandle,
     proposal => ({ proposal }),
     {
       getNotifier: ({ self }) =>
-        E(zoeInstanceAdmin).getSeatNotifier(zcfSeatToSeatHandle.get(self)),
+        E(zoeInstanceAdmin).getSeatNotifier(getSeatHandle(self)),
       getProposal: ({ state }) => state.proposal,
       exit: ({ self }, completion) => {
         assertActive(self);
         assertNoStagedAllocation(self);
         doExitSeat(self);
-        E(zoeInstanceAdmin).exitSeat(zcfSeatToSeatHandle.get(self), completion);
+        E(zoeInstanceAdmin).exitSeat(getSeatHandle(self), completion);
       },
       fail: (
         { self },
@@ -273,10 +307,7 @@ export const createSeatManager = (
         }
         if (!hasExited(self)) {
           doExitSeat(self);
-          E(zoeInstanceAdmin).failSeat(
-            zcfSeatToSeatHandle.get(self),
-            harden(reason),
-          );
+          E(zoeInstanceAdmin).failSeat(getSeatHandle(self), harden(reason));
         }
         return reason;
       },
@@ -345,15 +376,17 @@ export const createSeatManager = (
     seatHandle,
   }) => {
     const zcfSeat = makeZCFSeatInternal(proposal);
+
     activeZCFSeats.init(zcfSeat, initialAllocation);
-    zcfSeatToSeatHandle.init(zcfSeat, seatHandle);
+    initSeatHandle(zcfSeat, seatHandle);
     return zcfSeat;
   };
 
   /** @type {DropAllReferences} */
   const dropAllReferences = () => {
     activeZCFSeats = makeWeakStore('zcfSeat');
-    zcfSeatToSeatHandle = makeWeakStore('zcfSeat');
+    // TODO (ccth)   something else here.
+    // zcfSeatToSeatHandle = makeWeakStore('zcfSeat');
   };
 
   return harden({
