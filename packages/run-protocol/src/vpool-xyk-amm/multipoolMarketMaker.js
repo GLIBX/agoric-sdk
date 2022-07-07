@@ -5,6 +5,7 @@ import '@agoric/zoe/exported.js';
 import { AssetKind, makeIssuerKit } from '@agoric/ertp';
 import { handleParamGovernance, ParamTypes } from '@agoric/governance';
 import { makeStore, makeWeakStore } from '@agoric/store';
+import { makeAtomicProvider } from '@agoric/store/src/stores/store-utils.js';
 import {
   assertIssuerKeywords,
   offerTo,
@@ -169,11 +170,9 @@ const start = async (zcf, privateArgs) => {
   const secondaryBrandToLiquidityMint = makeWeakStore(
     'secondaryBrandToLiquidityMint',
   );
-  // To manage races in addIssuer, we keep a promise from the time of the
-  // first request until the Issuer is set up.
-  /** @type {WeakStore<Brand,ERef<Issuer<'nat'>>>} */
-  const secondaryBrandToLiquidityIssuerPromise =
-    makeWeakStore('secondaryBrand');
+  const secondaryBrandToLiquidityMintProvider =
+    // @ts-expect-error ??? why WeakStore? should signature accept?
+    makeAtomicProvider(secondaryBrandToLiquidityMint);
 
   const quoteIssuerKit = makeIssuerKit('Quote', AssetKind.SET);
 
@@ -278,8 +277,7 @@ const start = async (zcf, privateArgs) => {
   const addIssuer = makeAddIssuer(
     zcf,
     isSecondary,
-    secondaryBrandToLiquidityMint,
-    secondaryBrandToLiquidityIssuerPromise,
+    secondaryBrandToLiquidityMintProvider,
     () => {
       assert(reserveFacet, 'Must first resolveReserveFacet');
       return E(reserveFacet).addIssuerFromAmm;
